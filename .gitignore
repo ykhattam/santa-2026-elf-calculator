@@ -1,0 +1,25 @@
+/target/
+**/*.rs.bk
+*.pdb
+
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.venv/
+
+# Competition data is not committed (Kaggle terms + large files).
+data/*.csv
+data/*.zip
+outputs/*.csv
+outputs/*.db
+outputs/*.ndjson
+outputs/*.json
+
+# Local runtime state
+solutions.db
+solutions.db-wal
+solutions.db-shm
+*.log
+.DS_Store

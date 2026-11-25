@@ -1,0 +1,13 @@
+[package]
+name = "elf-verify"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Fast in-loop verifier for the Santa 2026 Elf Calculator VM"
+
+[[bin]]
+name = "elf-verify"
+path = "src/bin/elf-verify.rs"
+
+[dependencies]
+serde_json = "1"

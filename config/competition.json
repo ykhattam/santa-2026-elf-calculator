@@ -1,0 +1,31 @@
+{
+  "competition_name": "Santa 2026 - The Elf Calculator",
+  "deadline": "2027-01-28",
+  "window_days": 63,
+  "prize_pool_usd": 50000,
+  "prize_breakdown_usd": {
+    "main_1st": 12000,
+    "main_2nd": 10000,
+    "main_3rd": 10000,
+    "main_4th": 8000,
+    "rudolph": 10000
+  },
+  "leaderboard_split": "none (public leaderboard is the final score)",
+  "rudolph_prize": "cumulative time-at-rank-1 across the full competition window",
+  "submission_limit_per_day": 100,
+  "final_selections": 2,
+  "value_limit_max": 1000000000000000000,
+  "instruction_cap": 4096,
+  "cell_byte_cap": 131072,
+  "register_count": 48,
+  "target_coverage": "intermediate valid (target must appear at end of some step)",
+  "step_zero_coverage": "valid (targets in starting_values count)",
+  "puzzles_has_family_column": false,
+  "baseline_steps_public_day1": 130100,
+  "success_criteria": {
+    "final_total_steps_target": 105000,
+    "final_total_steps_stretch": 95000,
+    "leaderboard_target": "top 10",
+    "leaderboard_stretch": "top 3"
+  }
+}

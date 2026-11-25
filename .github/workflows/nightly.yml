@@ -1,0 +1,41 @@
+name: nightly-verifier-parity
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  differential:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: python -m pip install pytest
+
+      - name: Rust unit tests
+        run: cargo test --release
+
+      - name: Build in-loop verifier
+        run: cargo build --release
+
+      - name: Python reference tests
+        run: PYTHONPATH=python python -m pytest python/tests -q
+
+      - name: Generate 50k fuzz corpus
+        run: PYTHONPATH=python python -m elf_verify.cli fuzz --count 50000 --out outputs/fuzz.ndjson
+
+      - name: Differential check (zero semantic divergence required)
+        run: PYTHONPATH=python python -m elf_verify.cli differential --cases outputs/fuzz.ndjson --rust-bin target/release/elf-verify
+
+      - name: Ledger integrity smoke test
+        run: PYTHONPATH=python python -m elf_verify.cli init-db --db outputs/ci-solutions.db
