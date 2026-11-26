@@ -1,10 +1,11 @@
 """Command line entry point for the Python verifier and fuzz tooling."""
 
 import argparse
+import csv
 import json
 from pathlib import Path
 
-from . import differential, fuzz
+from . import differential, fuzz, ledger
 from .csvio import load_puzzles, load_submission
 from .ledger import init_db, record_fuzz_run
 from .verifier import DEFAULT_CONFIG, VerifyError, verify_submission
@@ -36,6 +37,23 @@ def build_parser() -> argparse.ArgumentParser:
     checker.add_argument("--puzzles", required=True)
     checker.add_argument("--submission", required=True)
     checker.add_argument("--json", action="store_true")
+
+    classifier = subparsers.add_parser("classify", help="train and apply the family classifier")
+    classifier.add_argument("--practice", default="data/practice_puzzles.csv")
+    classifier.add_argument("--scored", default="data/puzzles.csv")
+    classifier.add_argument("--out", default="outputs/families.csv")
+
+    seed = subparsers.add_parser("seed-puzzles", help="seed puzzle facts into the ledger")
+    seed.add_argument("--puzzles", default="data/puzzles.csv")
+    seed.add_argument("--families", default="outputs/families.csv")
+    seed.add_argument("--db", default="solutions.db")
+
+    parity = subparsers.add_parser("record-parity", help="record Kaggle live-scorer parity")
+    parity.add_argument("--submission-ref", required=True)
+    parity.add_argument("--local-steps", type=int, required=True)
+    parity.add_argument("--kaggle-score", type=int, required=True)
+    parity.add_argument("--submission-file", required=True)
+    parity.add_argument("--db", default="solutions.db")
 
     return parser
 
@@ -123,6 +141,35 @@ def main() -> int:
 
     elif args.command == "check":
         return run_check(args)
+
+    elif args.command == "classify":
+        from .families import classify_scored, validate_and_train
+
+        model, accuracy, training_rows = validate_and_train(args.practice)
+        counts = classify_scored(model, args.scored, args.out)
+        print(f"trained on {training_rows} practice puzzles")
+        print(f"5-fold CV accuracy: {accuracy:.3f} (gate: 0.850)")
+        print(f"predictions written to {args.out}")
+        for family, count in sorted(counts.items()):
+            print(f"  {family}: {count}")
+
+    elif args.command == "seed-puzzles":
+        with Path(args.families).open("r", encoding="utf-8") as handle:
+            families = {
+                row["id"]: row["pseudo_family"] for row in csv.DictReader(handle)
+            }
+        count = ledger.seed_puzzles(args.db, load_puzzles(args.puzzles), families)
+        print(f"seeded {count} puzzles into {args.db}")
+
+    elif args.command == "record-parity":
+        ledger.record_parity(
+            args.db,
+            args.submission_ref,
+            args.local_steps,
+            args.kaggle_score,
+            args.submission_file,
+        )
+        print("parity result recorded in ledger")
 
     return 0
 

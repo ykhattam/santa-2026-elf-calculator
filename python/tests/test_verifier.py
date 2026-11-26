@@ -64,22 +64,22 @@ def test_undefined_source():
 
 
 def test_compact_json():
-    assert is_compact_json('[{"op":"+","d":2,"i":0,"j":1}]')
-    assert not is_compact_json('[{"op":"+", "d":2}]')
-    assert is_compact_json('[{"op":"a b"}]')
+    assert is_compact_json('[["+",0,1,2]]')
+    assert not is_compact_json('[ ["+",0,1,2] ]')
+    assert is_compact_json('[["a b",0,1,2]]')
 
 
 def test_submission_byte_and_format_checks():
     with pytest.raises(VerifyError):
         verify_submission(BASE, "[]", VerifyConfig(max_cell_bytes=1))
     with pytest.raises(VerifyError):
-        verify_submission(BASE, "[] ", VerifyConfig(strict_compact_json=True))
+        verify_submission(BASE, "[ [\"+\",0,0,2] ]", VerifyConfig(strict_compact_json=True))
     with pytest.raises(VerifyError):
         verify_submission(BASE, "{}")
 
 
 def test_instruction_cap():
-    program = [{"op": "+", "d": 0, "i": 0, "j": 0}] * 4097
+    program = [["+", 0, 0, 0]] * 4097
     with pytest.raises(VerifyError):
         verify_submission(
             Puzzle(id="p", starting_values=(1,), targets=(1,), value_limit=10**18),
@@ -88,6 +88,6 @@ def test_instruction_cap():
 
 
 def test_float_register_is_rejected():
-    program = '[{"op":"+","d":0.0,"i":0,"j":0}]'
+    program = '[["+",0.0,0,0]]'
     with pytest.raises(VerifyError):
         verify_submission(BASE, program)

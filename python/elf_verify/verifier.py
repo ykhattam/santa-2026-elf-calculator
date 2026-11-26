@@ -59,28 +59,26 @@ def _parse_program(text: str, config: VerifyConfig):
 
     instructions = []
     for position, item in enumerate(document):
-        if not isinstance(item, dict):
-            raise VerifyError(f"instruction {position}: expected a JSON object")
-        for key in ("op", "d", "i", "j"):
-            if key not in item:
-                raise VerifyError(f"instruction {position}: missing field {key}")
+        # Real format is positional: [op, i, j, d] (sources first, destination last).
+        if not isinstance(item, list) or len(item) != 4:
+            raise VerifyError(f"instruction {position}: expected a 4-element JSON array")
 
-        op = item["op"]
+        op = item[0]
         if not isinstance(op, str) or op not in _OPERATORS:
             raise VerifyError(f"instruction {position}: unknown op {op!r}")
 
         operands = []
-        for key in ("d", "i", "j"):
-            value = item[key]
+        for label, value in zip(("i", "j", "d"), item[1:]):
             if isinstance(value, bool) or not isinstance(value, int):
-                raise VerifyError(f"instruction {position}: {key} must be an integer")
+                raise VerifyError(f"instruction {position}: {label} must be an integer")
             if value < 0 or value >= config.max_registers:
                 raise VerifyError(
-                    f"instruction {position}: {key}={value} outside 0..{config.max_registers}"
+                    f"instruction {position}: {label}={value} outside 0..{config.max_registers}"
                 )
             operands.append(value)
 
-        instructions.append((op, operands[0], operands[1], operands[2]))
+        source_i, source_j, destination = operands
+        instructions.append((op, destination, source_i, source_j))
     return instructions
 
 

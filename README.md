@@ -7,23 +7,24 @@ for the machine-readable rule facts seeded into the ledger.
 **Hardware budget:** 4-core CPU / 16 GiB RAM
 **Timeline:** 2026-11-26 → 2027-01-28 (63 days)
 **Target:** Top-3 finish + Rudolph Prize contention
-**Baseline:** ~130,100 steps (public, Day 1)
+**Baseline:** 124,494 steps (live leaderboard best observed 2026-11-26); sample submission verifies at 1,490,379 steps
 
 ## Current status
 
 | Stage | Window | Status |
 |-------|--------|--------|
-| Stage 0 — Lock & smoke test | Days 1–2 | **Dual verifier + fuzz harness built** — 0 divergences on 50,020 cases; awaiting real CSVs for parity gate |
+| Stage 0 — Lock & smoke test | Days 1–2 | **GATE PASSED** (2026-11-26) — dual verifiers, 0 divergences on 50,020 cases, Kaggle parity exact, classifier 92.5% |
 | Stage 1 — Full 1,000-puzzle profile | Days 3–4 | Not started |
 | Stage 2 — Bandit-routed heavy optimization | Days 5–40 | Not started |
 | Stage 3 — Global recipe-graph CP-SAT | Days 41–52 | Not started |
 | Stage 4 — Final polish & audit | Days 53–63 | Not started |
 
-Stage 0 gate (not yet passed):
-- [x] Semantic divergence = 0 on 50k fuzz corpus (50,020 cases, 2026-11-26)
-- [ ] Kaggle live score = local Rust verifier total (exact match)
-- [ ] Family classifier trained, ≥ 85% accuracy on `practice_puzzles.csv` held-out fold
-- [ ] Prize rules + submission limits recorded in `solutions.db` metadata
+Stage 0 gate — **passed 2026-11-26**:
+- [x] Semantic divergence = 0 on 50k fuzz corpus (50,020 cases)
+- [x] Kaggle live score = local verifier total (1,490,379, exact match, submission `58947698`)
+- [x] Family classifier trained, 92.5% 5-fold CV accuracy on `practice_puzzles.csv` (gate: 85%)
+- [x] Prize rules + submission limits recorded in `solutions.db` metadata
+- [x] All 1,000 puzzles seeded into `solutions.db` with predicted pseudo-families
 
 ## Architecture (locked — do not add more)
 
@@ -78,7 +79,11 @@ python3 -m elf_verify.cli differential \
 # Verify a real submission once the CSVs are in data/
 target/release/elf-verify check \
   --puzzles data/puzzles.csv \
-  --submission data/submission.csv
+  --submission data/sample_submission.csv
+
+# Train the family classifier and seed the ledger with all 1,000 puzzles
+python3 -m elf_verify.cli classify
+python3 -m elf_verify.cli seed-puzzles
 ```
 
 `PYTHONPATH=python` is required for the Python CLI unless a virtualenv is configured.

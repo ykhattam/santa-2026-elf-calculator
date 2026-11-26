@@ -21,7 +21,11 @@
   "target_coverage": "intermediate valid (target must appear at end of some step)",
   "step_zero_coverage": "valid (targets in starting_values count)",
   "puzzles_has_family_column": false,
-  "baseline_steps_public_day1": 130100,
+  "baseline_steps_public_day1": 124494,
+  "sample_submission_steps_verified": 1490379,
+  "parity_submission_ref": "58947698",
+  "parity_exact_match": true,
+  "family_classifier_cv_accuracy": 0.925,
   "success_criteria": {
     "final_total_steps_target": 105000,
     "final_total_steps_stretch": 95000,

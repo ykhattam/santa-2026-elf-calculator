@@ -74,7 +74,8 @@ def _valid_program(rng: random.Random, start: list[int], limit: int):
 
         op, result = rng.choice(candidates)
         destination = rng.randrange(8)
-        instructions.append({"op": op, "d": destination, "i": i, "j": j})
+        # Competition format: [op, i, j, d].
+        instructions.append([op, i, j, destination])
         values[destination] = result
         if destination not in defined:
             defined.append(destination)
@@ -88,24 +89,26 @@ def _valid_program(rng: random.Random, start: list[int], limit: int):
 def _alias_program(rng: random.Random, start: list[int], limit: int):
     instructions, targets = _valid_program(rng, start, limit)
     for instruction in instructions:
+        i, j, destination = instruction[1], instruction[2], instruction[3]
         pattern = rng.randrange(3)
         if pattern == 0:
-            instruction["d"] = instruction["i"]
+            destination = i
         elif pattern == 1:
-            instruction["d"] = instruction["j"]
+            destination = j
         else:
-            instruction["i"] = instruction["j"] = instruction["d"]
+            i = j = destination
+        instruction[1], instruction[2], instruction[3] = i, j, destination
     return instructions, targets
 
 
 def _generate_one(rng: random.Random, index: int, category: str) -> dict:
     if category == "byte_cap":
         puzzle = _make_puzzle(rng, 10**18)
-        instruction = {"op": "+", "d": 0, "i": 0, "j": 0, "pad": "x" * 200}
-        program = [dict(instruction) for _ in range(4096)]
+        instruction = ["+", 0, 0, 0, "x" * 200]
+        program = [list(instruction) for _ in range(4096)]
     elif category == "too_many":
         puzzle = _make_puzzle(rng, 10**18)
-        program = [{"op": "+", "d": 0, "i": 0, "j": 0} for _ in range(4097)]
+        program = [["+", 0, 0, 0] for _ in range(4097)]
     else:
         puzzle = _make_puzzle(rng)
         start = puzzle["starting_values"]
@@ -123,20 +126,20 @@ def _generate_one(rng: random.Random, index: int, category: str) -> dict:
             program, _ = _valid_program(rng, start, limit)
             puzzle["targets"] = [start[0]]
         elif category == "negative":
-            program = [{"op": "-", "d": 0, "i": 0, "j": 0}]
+            program = [["-", 0, 0, 0]]
         elif category == "nondiv":
-            program = [{"op": "/", "d": 0, "i": 0, "j": 1}]
+            program = [["/", 0, 1, 0]]
         elif category == "limit_overflow":
             puzzle = _make_puzzle(rng, 10)
             big = 10**18 - 1
             puzzle["starting_values"] = [big, big]
-            program = [{"op": "*", "d": 0, "i": 0, "j": 1}]
+            program = [["*", 0, 1, 0]]
         elif category == "undefined_source":
-            program = [{"op": "+", "d": 0, "i": 47, "j": 0}]
+            program = [["+", 47, 0, 0]]
         elif category == "bad_register":
-            program = [{"op": "+", "d": 48, "i": 0, "j": 0}]
+            program = [["+", 0, 0, 48]]
         elif category == "bad_op":
-            program = [{"op": "%", "d": 0, "i": 0, "j": 1}]
+            program = [["%", 0, 1, 0]]
         else:
             raise ValueError(f"unknown category: {category}")
 

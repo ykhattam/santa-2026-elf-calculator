@@ -1,9 +1,9 @@
 # Elf Calculator VM — Working Specification
 
 This file is the executable contract for both verifiers. It is derived from the locked facts
-in the execution plan. Items marked **[ASSUMPTION]** must be reconciled against the real
-`sample_submission.csv` / competition description as soon as the Kaggle data is available;
-until then, both verifiers implement exactly what is written here.
+in the execution plan and reconciled against the real Kaggle data on 2026-11-26. The only
+early assumption — object-form instructions — was wrong and has been replaced with the
+verified positional `[op, i, j, d]` form documented below.
 
 ## Registers
 
@@ -14,25 +14,26 @@ until then, both verifiers implement exactly what is written here.
 
 ## Program representation
 
-A program is a JSON array of instruction objects serialized compactly
+A program is a JSON array of instruction arrays serialized compactly
 (`separators=(",", ":")`, no insignificant whitespace, UTF-8 encoded).
 
 ```json
-[{"op":"+","d":2,"i":0,"j":1},{"op":"*","d":3,"i":2,"j":1}]
+[["+",0,1,2],["*",2,2,3]]
 ```
 
-Fields:
+Each instruction is exactly four elements: `[op, i, j, d]` — **both sources first,
+destination last**.
 
-| Field | Type | Meaning |
-|-------|------|---------|
-| `op`  | string | One of `+`, `-`, `*`, `/` |
-| `d`   | integer `0..=47` | Destination register |
-| `i`   | integer `0..=47` | First source register |
-| `j`   | integer `0..=47` | Second source register |
+| Position | Type | Meaning |
+|----------|------|---------|
+| `0` (`op`) | string | One of `+`, `-`, `*`, `/` |
+| `1` (`i`)  | integer `0..=47` | First source register |
+| `2` (`j`)  | integer `0..=47` | Second source register |
+| `3` (`d`)  | integer `0..=47` | Destination register |
 
-**[ASSUMPTION]** Extra keys in an instruction object are tolerated; the four required keys
-must be present with the types above. If the real format is positional arrays instead of
-objects, change `parser.rs` and `verifier.py` together and re-run the 50k fuzz gate.
+This order was verified against the real `sample_submission.csv`: 100/100 sampled programs
+replay successfully as `[op, i, j, d]`, and 0/100 as `[op, d, i, j]`. Both verifiers reject
+any instruction that is not a four-element array.
 
 ## Semantics
 

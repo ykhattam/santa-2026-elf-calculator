@@ -9,12 +9,15 @@ data/sample_submission.csv
 data/submission.csv
 ```
 
-The Kaggle CLI is currently unavailable in this environment (missing `six`, and no
-`~/.kaggle/kaggle.json`). Once credentials are installed:
+The Kaggle CLI is working (`six` installed into the uv tool env; credentials are available
+as `yassineelkhattam` via access token). The files below are already downloaded here and
+are gitignored.
+
+To refresh them:
 
 ```bash
-kaggle competitions download -c <competition-slug> -p data
-cd data && unzip -o <archive>.zip
+kaggle competitions download -c santa-2026 -p data --force
+cd data && unzip -o santa-2026.zip && rm santa-2026.zip
 ```
 
 Then run the Stage 0 gates:

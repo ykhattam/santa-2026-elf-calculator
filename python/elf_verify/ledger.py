@@ -60,3 +60,53 @@ def record_fuzz_run(db_path: str, case_count: int, divergences: int, report_path
             "INSERT INTO fuzz_runs(case_count, divergences, report_path) VALUES(?, ?, ?)",
             (case_count, divergences, report_path),
         )
+
+
+def record_parity(
+    db_path: str,
+    submission_ref: str,
+    local_steps: int,
+    kaggle_score: int,
+    submission_path: str,
+) -> None:
+    """Record the Stage 0 live-scorer parity result as immutable metadata."""
+    matched = str(local_steps == kaggle_score).lower()
+    facts = {
+        "parity.submission_ref": submission_ref,
+        "parity.submission_file": submission_path,
+        "parity.local_steps": str(local_steps),
+        "parity.kaggle_score": str(kaggle_score),
+        "parity.exact_match": matched,
+    }
+    with sqlite3.connect(db_path) as connection:
+        for key, value in facts.items():
+            connection.execute(
+                "INSERT INTO meta(key, value, updated_at) VALUES(?, ?, datetime('now')) "
+                "ON CONFLICT(key) DO UPDATE SET value=excluded.value, "
+                "updated_at=excluded.updated_at",
+                (key, value),
+            )
+        connection.execute(
+            "INSERT INTO telemetry(event, payload) VALUES('stage0_parity', ?)",
+            (json.dumps(facts, sort_keys=True),),
+        )
+
+
+def seed_puzzles(db_path: str, puzzles, families: dict[str, str]) -> int:
+    """Seed the puzzle table; no solution rows are written here."""
+    with sqlite3.connect(db_path) as connection:
+        for puzzle in puzzles:
+            connection.execute(
+                "INSERT INTO puzzles(id, starting_values, targets, value_limit, pseudo_family) "
+                "VALUES(?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET "
+                "pseudo_family=excluded.pseudo_family",
+                (
+                    puzzle.id,
+                    json.dumps(list(puzzle.starting_values), separators=(",", ":")),
+                    json.dumps(list(puzzle.targets), separators=(",", ":")),
+                    str(puzzle.value_limit),
+                    families.get(puzzle.id),
+                ),
+            )
+        connection.commit()
+        return connection.execute("SELECT COUNT(*) FROM puzzles").fetchone()[0]

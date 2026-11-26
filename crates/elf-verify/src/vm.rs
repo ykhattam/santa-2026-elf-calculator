@@ -274,9 +274,9 @@ mod tests {
 
     #[test]
     fn compact_json_detection() {
-        assert!(is_compact_json("[{\"op\":\"+\",\"d\":2,\"i\":0,\"j\":1}]"));
-        assert!(!is_compact_json("[{\"op\": \"+\"}]"));
-        assert!(is_compact_json("[{\"op\":\"a b\"}]"));
+        assert!(is_compact_json("[[\"+\",0,1,2]]"));
+        assert!(!is_compact_json("[ [\"+\",0,1,2] ]"));
+        assert!(is_compact_json("[[\"a b\",0,1,2]]"));
     }
 
     #[test]
@@ -293,7 +293,7 @@ mod tests {
 
         let cfg = VerifyConfig::default();
         assert!(matches!(
-            verify_submission(&p, "[ {\"op\":\"+\"}]", &cfg),
+            verify_submission(&p, "[ [\"+\",0,0,2] ]", &cfg),
             Err(VerifyError::NonCompactJson)
         ));
     }
