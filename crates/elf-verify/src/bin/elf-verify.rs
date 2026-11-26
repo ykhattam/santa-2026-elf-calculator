@@ -15,7 +15,7 @@ use elf_verify::model::VerifyConfig;
 
 fn usage() -> ! {
     eprintln!(
-        "usage:\n  elf-verify check --puzzles <csv> --submission <csv> [--json]\n  elf-verify fuzz --cases <ndjson> [--out <path>]"
+        "usage:\n  elf-verify check --puzzles <csv> --submission <csv> [--json] [--allow-partial]\n  elf-verify fuzz --cases <ndjson> [--out <path>]"
     );
     std::process::exit(2);
 }
@@ -52,6 +52,7 @@ fn check(args: &[String]) -> Result<bool, String> {
     let puzzles_path = opts.get("puzzles").ok_or("check requires --puzzles")?;
     let submission_path = opts.get("submission").ok_or("check requires --submission")?;
     let as_json = opts.contains_key("json");
+    let allow_partial = opts.contains_key("allow-partial");
 
     let puzzles = index_puzzles(load_puzzles(puzzles_path)?)?;
     let rows = load_submission(submission_path)?;
@@ -79,9 +80,11 @@ fn check(args: &[String]) -> Result<bool, String> {
         }
     }
 
-    for id in puzzles.keys() {
-        if !seen_ids.contains(id) {
-            failures.push(format!("puzzle {id} has no submission row"));
+    if !allow_partial {
+        for id in puzzles.keys() {
+            if !seen_ids.contains(id) {
+                failures.push(format!("puzzle {id} has no submission row"));
+            }
         }
     }
 

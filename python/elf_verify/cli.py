@@ -61,6 +61,23 @@ def build_parser() -> argparse.ArgumentParser:
     profiler.add_argument("--db", default="solutions.db")
     profiler.add_argument("--out", default="outputs/regret_ranking.csv")
 
+    export = subparsers.add_parser("export-submission", help="export the best verified solution per puzzle")
+    export.add_argument("--db", default="solutions.db")
+    export.add_argument("--out", default="outputs/submission.csv")
+
+    allocate = subparsers.add_parser("stage2-allocate", help="select puzzles by bandit allocation")
+    allocate.add_argument("--budget", type=int, default=100)
+    allocate.add_argument("--db", default="solutions.db")
+
+    improve_cmd = subparsers.add_parser("stage2-improve", help="run one bounded improvement round")
+    improve_cmd.add_argument("--budget", type=int, default=100)
+    improve_cmd.add_argument("--db", default="solutions.db")
+    improve_cmd.add_argument("--out", default="outputs/stage2_submission.csv")
+
+    ceiling = subparsers.add_parser("ceiling", help="check a Stage 2 step ceiling")
+    ceiling.add_argument("--day", type=int, required=True)
+    ceiling.add_argument("--db", default="solutions.db")
+
     yields = subparsers.add_parser("yield", help="measure per-family step improvement per CPU-second")
     yields.add_argument("--puzzles", default="data/puzzles.csv")
     yields.add_argument("--db", default="solutions.db")
@@ -213,6 +230,75 @@ def main() -> int:
                 "GROUP BY pseudo_family ORDER BY SUM(regret) DESC"
             ):
                 print(f"  {family}: {count} puzzles, regret {regret}")
+
+    elif args.command == "export-submission":
+        with sqlite3.connect(args.db) as connection:
+            rows = connection.execute(
+                "SELECT s.puzzle_id, s.program_json FROM solutions s "
+                "JOIN (SELECT puzzle_id, MIN(steps) AS steps FROM solutions GROUP BY puzzle_id) b "
+                "ON s.puzzle_id = b.puzzle_id AND s.steps = b.steps "
+                "ORDER BY s.puzzle_id"
+            ).fetchall()
+        destination = Path(args.out)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        with destination.open("w", newline="", encoding="utf-8") as handle:
+            writer = csv.writer(handle)
+            writer.writerow(["id", "program"])
+            writer.writerows(rows)
+        print(f"exported {len(rows)} solutions to {args.out}")
+
+    elif args.command == "stage2-allocate":
+        from .bandit import BanditAllocator
+
+        selected = BanditAllocator(args.db).select(args.budget)
+        print(f"selected {len(selected)} puzzles")
+        print(" ".join(selected[:20]))
+
+    elif args.command == "stage2-improve":
+        from .bandit import BanditAllocator
+        from .improve import solve as improve_solve
+        from .stage2 import log_allocation
+
+        selected = BanditAllocator(args.db).select(args.budget)
+        with sqlite3.connect(args.db) as connection:
+            best = {
+                puzzle_id: steps
+                for puzzle_id, steps in connection.execute(
+                    "SELECT puzzle_id, MIN(steps) FROM solutions GROUP BY puzzle_id"
+                )
+            }
+        puzzles = {puzzle.id: puzzle for puzzle in load_puzzles("data/puzzles.csv")}
+        rows = []
+        improved = 0
+        before = after = 0
+        for puzzle_id in selected:
+            puzzle = puzzles.get(puzzle_id)
+            if puzzle is None:
+                continue
+            program = improve_solve(puzzle)
+            steps = len(json.loads(program))
+            if puzzle_id in best and steps >= best[puzzle_id]:
+                continue
+            rows.append((puzzle_id, program))
+            before += best.get(puzzle_id, 0)
+            after += steps
+            improved += 1
+
+        destination = Path(args.out)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        with destination.open("w", newline="", encoding="utf-8") as handle:
+            writer = csv.writer(handle)
+            writer.writerow(["id", "program"])
+            writer.writerows(rows)
+        log_allocation(args.db, selected, "subtractive_cone_v1")
+        print(f"selected {len(selected)}, improved {improved}, steps {before} -> {after}")
+        print(f"wrote {args.out}")
+
+    elif args.command == "ceiling":
+        from .stage2 import check_ceiling
+
+        result = check_ceiling(args.db, args.day)
+        print(json.dumps(result, sort_keys=True))
 
     elif args.command == "yield":
         from .profile import yield_baseline

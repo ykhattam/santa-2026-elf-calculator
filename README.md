@@ -15,7 +15,7 @@ for the machine-readable rule facts seeded into the ledger.
 |-------|--------|--------|
 | Stage 0 — Lock & smoke test | Days 1–2 | **GATE PASSED** (2026-11-26) — dual verifiers, 0 divergences on 50,020 cases, Kaggle parity exact, classifier 92.5% |
 | Stage 1 — Full 1,000-puzzle profile | Days 3–4 | **GATE PASSED** — 100% baseline coverage, 591,002 steps, regret 551,843 |
-| Stage 2 — Bandit-routed heavy optimization | Days 5–40 | Not started |
+| Stage 2 — Bandit-routed heavy optimization | Days 5–40 | **IN PROGRESS** — two verified rounds, 591,002 → 551,171 steps; ceilings not met |
 | Stage 3 — Global recipe-graph CP-SAT | Days 41–52 | Not started |
 | Stage 4 — Final polish & audit | Days 53–63 | Not started |
 
@@ -32,6 +32,19 @@ Stage 1 gate — **passed 2026-11-26**:
 - [x] Lower bounds (39,159 total) and absolute-regret ranking (551,843 total) published to `outputs/regret_ranking.csv`
 - [x] Yield priors per pseudo-family published to `outputs/yield_baseline.csv`
 - [x] Memory high-water measured (25 MB); Stage 2 subprocess cap set to 2,100 MB (measured + ~2 GiB margin)
+
+Stage 2 progress (2026-11-26):
+- [x] Bandit allocator (85% regret exploit / 15% family exploration, stalled-family throttle)
+- [x] Subtractive-cone solver: `t = 2^k - d` chosen when cheaper than binary expansion
+- [x] Two verified rounds; 1,539 total improvements; best total **551,171** (Kaggle score confirmed)
+- [x] Daily export `outputs/submission.csv`, full verifier check passes
+- [ ] Ceiling gates: **missed** — Day 15 target <128,000 vs current 551,171
+
+Ceiling diagnosis: both current solvers build every target independently via a ~20-step
+binary expansion. The leaderboard's ~4.6 steps/target implies short *shared* recipes that
+bounded forward search (depth 3) and direct factorization do not recover. Per the locked plan,
+Stage 3 must not start until this is resolved; the next work item is a shared-subexpression
+/e-graph pass rather than more independent per-target constructions.
 
 ## Architecture (locked — do not add more)
 
