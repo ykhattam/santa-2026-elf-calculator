@@ -3,6 +3,7 @@
 import argparse
 import csv
 import json
+import sqlite3
 from pathlib import Path
 
 from . import differential, fuzz, ledger
@@ -54,6 +55,32 @@ def build_parser() -> argparse.ArgumentParser:
     parity.add_argument("--kaggle-score", type=int, required=True)
     parity.add_argument("--submission-file", required=True)
     parity.add_argument("--db", default="solutions.db")
+
+    profiler = subparsers.add_parser("profile", help="compute lower bounds and regret ranking")
+    profiler.add_argument("--puzzles", default="data/puzzles.csv")
+    profiler.add_argument("--db", default="solutions.db")
+    profiler.add_argument("--out", default="outputs/regret_ranking.csv")
+
+    yields = subparsers.add_parser("yield", help="measure per-family step improvement per CPU-second")
+    yields.add_argument("--puzzles", default="data/puzzles.csv")
+    yields.add_argument("--db", default="solutions.db")
+    yields.add_argument("--out", default="outputs/yield_baseline.csv")
+
+    baseline = subparsers.add_parser("baseline", help="generate Stage 1 baseline programs")
+    baseline.add_argument("--puzzles", default="data/puzzles.csv")
+    baseline.add_argument("--out", default="outputs/baseline_submission.csv")
+
+    seed_solutions = subparsers.add_parser(
+        "seed-solutions", help="insert already-verified solutions into the ledger"
+    )
+    seed_solutions.add_argument("--submission", required=True)
+    seed_solutions.add_argument("--tag", required=True)
+    seed_solutions.add_argument("--note", default="")
+    seed_solutions.add_argument("--db", default="solutions.db")
+    seed_solutions.add_argument(
+        "--require-check",
+        help="path to Rust `check --json` output; seeding aborts unless ok=true",
+    )
 
     return parser
 
@@ -170,6 +197,55 @@ def main() -> int:
             args.submission_file,
         )
         print("parity result recorded in ledger")
+
+    elif args.command == "profile":
+        from .profile import profile
+
+        summary = profile(args.db, load_puzzles(args.puzzles), args.out)
+        print(f"profiled {summary['puzzles']} puzzles")
+        print(f"total steps:       {summary['total_steps']}")
+        print(f"total lower bound: {summary['total_lower_bound']}")
+        print(f"total regret:      {summary['total_regret']}")
+        print(f"ranking: {summary['ranking_path']}")
+        with sqlite3.connect(args.db) as connection:
+            for family, count, regret in connection.execute(
+                "SELECT pseudo_family, COUNT(*), SUM(regret) FROM puzzles "
+                "GROUP BY pseudo_family ORDER BY SUM(regret) DESC"
+            ):
+                print(f"  {family}: {count} puzzles, regret {regret}")
+
+    elif args.command == "yield":
+        from .profile import yield_baseline
+
+        summary = yield_baseline(args.db, load_puzzles(args.puzzles), args.out)
+        print(f"yield priors for {summary['families']} families written to {summary['ranking_path']}")
+        print(Path(summary["ranking_path"]).read_text(encoding="utf-8"), end="")
+
+    elif args.command == "baseline":
+        from .baseline import solve
+
+        puzzles = load_puzzles(args.puzzles)
+        destination = Path(args.out)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        total = 0
+        with destination.open("w", newline="", encoding="utf-8") as handle:
+            writer = csv.writer(handle)
+            writer.writerow(["id", "program"])
+            for puzzle in puzzles:
+                program = solve(puzzle)
+                total += len(json.loads(program))
+                writer.writerow([puzzle.id, program])
+        print(f"wrote {len(puzzles)} baseline programs, {total} total steps to {args.out}")
+
+    elif args.command == "seed-solutions":
+        if args.require_check:
+            report = json.loads(Path(args.require_check).read_text(encoding="utf-8"))
+            if not report.get("ok"):
+                print("refusing to seed: Rust verifier check did not pass", file=__import__("sys").stderr)
+                return 1
+        rows = load_submission(args.submission)
+        written = ledger.seed_solutions(args.db, rows, args.tag, args.note)
+        print(f"inserted {written} improved solutions into {args.db}")
 
     return 0
 

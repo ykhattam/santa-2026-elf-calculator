@@ -1,5 +1,6 @@
 """Initialize and inspect the immutable provenance ledger."""
 
+import hashlib
 import json
 import sqlite3
 from datetime import date, timedelta
@@ -90,6 +91,28 @@ def record_parity(
             "INSERT INTO telemetry(event, payload) VALUES('stage0_parity', ?)",
             (json.dumps(facts, sort_keys=True),),
         )
+
+
+def seed_solutions(db_path: str, rows, tag: str, note: str = "") -> int:
+    """Insert verified solutions, keeping only strict improvements per puzzle."""
+    written = 0
+    with sqlite3.connect(db_path) as connection:
+        for puzzle_id, program_json in rows:
+            steps = len(json.loads(program_json))
+            digest = hashlib.sha256(program_json.encode("utf-8")).hexdigest()
+            best = connection.execute(
+                "SELECT MIN(steps) FROM solutions WHERE puzzle_id = ?", (puzzle_id,)
+            ).fetchone()[0]
+            if best is not None and best <= steps:
+                continue
+            connection.execute(
+                "INSERT INTO solutions(puzzle_id, steps, solver_tag, program_json, sha256, note) "
+                "VALUES(?, ?, ?, ?, ?, ?)",
+                (puzzle_id, steps, tag, program_json, digest, note),
+            )
+            written += 1
+        connection.commit()
+    return written
 
 
 def seed_puzzles(db_path: str, puzzles, families: dict[str, str]) -> int:

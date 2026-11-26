@@ -26,6 +26,12 @@
   "parity_submission_ref": "58947698",
   "parity_exact_match": true,
   "family_classifier_cv_accuracy": 0.925,
+  "stage1_baseline_steps": 591002,
+  "stage1_lower_bound_total": 39159,
+  "stage1_total_regret": 551843,
+  "stage1_baseline_solver": "shared_powers_binary",
+  "stage1_memory_high_water_kb": 25048,
+  "stage1_subprocess_cap_mb": 2100,
   "success_criteria": {
     "final_total_steps_target": 105000,
     "final_total_steps_stretch": 95000,

@@ -14,7 +14,7 @@ for the machine-readable rule facts seeded into the ledger.
 | Stage | Window | Status |
 |-------|--------|--------|
 | Stage 0 — Lock & smoke test | Days 1–2 | **GATE PASSED** (2026-11-26) — dual verifiers, 0 divergences on 50,020 cases, Kaggle parity exact, classifier 92.5% |
-| Stage 1 — Full 1,000-puzzle profile | Days 3–4 | Not started |
+| Stage 1 — Full 1,000-puzzle profile | Days 3–4 | **GATE PASSED** — 100% baseline coverage, 591,002 steps, regret 551,843 |
 | Stage 2 — Bandit-routed heavy optimization | Days 5–40 | Not started |
 | Stage 3 — Global recipe-graph CP-SAT | Days 41–52 | Not started |
 | Stage 4 — Final polish & audit | Days 53–63 | Not started |
@@ -25,6 +25,13 @@ Stage 0 gate — **passed 2026-11-26**:
 - [x] Family classifier trained, 92.5% 5-fold CV accuracy on `practice_puzzles.csv` (gate: 85%)
 - [x] Prize rules + submission limits recorded in `solutions.db` metadata
 - [x] All 1,000 puzzles seeded into `solutions.db` with predicted pseudo-families
+
+Stage 1 gate — **passed 2026-11-26**:
+- [x] 100% of puzzles have a verifier-approved baseline in `solutions.db`
+- [x] Total baseline steps computed: **591,002** (sample was 1,490,379; plan's 130k reference is not yet met — Stage 2 must close the gap)
+- [x] Lower bounds (39,159 total) and absolute-regret ranking (551,843 total) published to `outputs/regret_ranking.csv`
+- [x] Yield priors per pseudo-family published to `outputs/yield_baseline.csv`
+- [x] Memory high-water measured (25 MB); Stage 2 subprocess cap set to 2,100 MB (measured + ~2 GiB margin)
 
 ## Architecture (locked — do not add more)
 
@@ -84,6 +91,18 @@ target/release/elf-verify check \
 # Train the family classifier and seed the ledger with all 1,000 puzzles
 python3 -m elf_verify.cli classify
 python3 -m elf_verify.cli seed-puzzles
+
+# Stage 1 fast sweep (verify before seeding — --require-check enforces this)
+python3 -m elf_verify.cli baseline
+target/release/elf-verify check \
+  --puzzles data/puzzles.csv --submission outputs/baseline_submission.csv --json \
+  > outputs/baseline_check.json
+python3 -m elf_verify.cli seed-solutions --submission data/sample_submission.csv --tag sample_greedy
+python3 -m elf_verify.cli seed-solutions \
+  --submission outputs/baseline_submission.csv --tag baseline_shared_powers \
+  --require-check outputs/baseline_check.json
+python3 -m elf_verify.cli profile
+python3 -m elf_verify.cli yield
 ```
 
 `PYTHONPATH=python` is required for the Python CLI unless a virtualenv is configured.
