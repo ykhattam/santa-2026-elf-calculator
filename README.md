@@ -5,7 +5,9 @@ Execution repository for the Santa 2026 Kaggle competition. Architecture is lock
 for the machine-readable rule facts seeded into the ledger.
 
 **Hardware budget:** 4-core CPU / 16 GiB RAM
-**Timeline:** 2026-11-26 → 2027-01-28 (63 days)
+**Timeline:** competition started 2026-11-18 (today is ~Day 9); deadline 2027-01-28.
+See [`docs/competition_intelligence.md`](docs/competition_intelligence.md) for corrected
+facts and why the ceiling is not a quick fix.
 **Target:** Top-3 finish + Rudolph Prize contention
 **Baseline:** 124,494 steps (live leaderboard best observed 2026-11-26); sample submission verifies at 1,490,379 steps
 
@@ -40,11 +42,12 @@ Stage 2 progress (2026-11-26):
 - [x] Daily export `outputs/submission.csv`, full verifier check passes
 - [ ] Ceiling gates: **missed** — Day 15 target <128,000 vs current 551,171
 
-Ceiling diagnosis: both current solvers build every target independently via a ~20-step
-binary expansion. The leaderboard's ~4.6 steps/target implies short *shared* recipes that
-bounded forward search (depth 3) and direct factorization do not recover. Per the locked plan,
-Stage 3 must not start until this is resolved; the next work item is a shared-subexpression
-/e-graph pass rather than more independent per-target constructions.
+Ceiling diagnosis (updated after checking official pages + public forum method threads):
+independent targets are uniform random numbers with no generator shortcut; the public
+frontier (~128,239 steps) is the product of weeks of multi-engine search, not one trick.
+Cheap levers (recombination, register relaxation, rescheduling) are already exhausted there.
+We will not use leaked frontier answer files. A full resolution requires a long compute
+campaign, not a single new heuristic — see `docs/competition_intelligence.md`.
 
 ## Architecture (locked — do not add more)
 

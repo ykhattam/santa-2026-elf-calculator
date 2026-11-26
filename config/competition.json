@@ -1,7 +1,11 @@
 {
   "competition_name": "Santa 2026 - The Elf Calculator",
+  "start_date": "2026-11-18",
+  "rudolph_window_start": "2026-11-18",
   "deadline": "2027-01-28",
+  "entry_deadline": "2027-01-21",
   "window_days": 63,
+  "public_frontier_steps_observed": 128239,
   "prize_pool_usd": 50000,
   "prize_breakdown_usd": {
     "main_1st": 12000,
