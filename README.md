@@ -36,7 +36,7 @@ Stage 1 gate — **passed 2026-11-26**:
 Stage 2 progress (2026-11-26):
 - [x] Bandit allocator (85% regret exploit / 15% family exploration, stalled-family throttle)
 - [x] Subtractive-cone solver: `t = 2^k - d` chosen when cheaper than binary expansion
-- [x] Two verified rounds; 1,539 total improvements; best total **551,171** (Kaggle score confirmed)
+- [x] Two verified rounds; 863 puzzles improved by the subtractive solver; best total **551,171** (Kaggle score confirmed)
 - [x] Daily export `outputs/submission.csv`, full verifier check passes
 - [ ] Ceiling gates: **missed** — Day 15 target <128,000 vs current 551,171
 
