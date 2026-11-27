@@ -50,6 +50,21 @@ The LNS re-selection harness was re-run with `naf` added to its neighborhood
 already selects the cheapest constructor per target. The gain came from the new
 constructor applied globally, not from LNS search.
 
+## Follow-up 2: higher-radix signed digits — no-go (2026-11-27)
+
+Implemented width-4 wNAF (digits ±1, ±3, … ±15) with a shared odd-digit bank.
+The theory looked favorable (332,898 vs 354,173 weighted ops across all 26,902
+targets), but the odd-digit bank consumes 7 registers, shrinking the power ladder
+from 40 to 33 entries. Every high-bit power then needs extra multiplications, which
+more than cancels the digit saving.
+
+Measured on 100 puzzles: **wNAF 47,655 vs NAF 44,834 steps** (6.3% worse); wNAF
+won on only 9/100 puzzles. Not adopted. Width-5 is worse still because it needs a
+15-register odd bank.
+
+Conclusion: under the 48-register constraint, higher radix does not pay. NAF
+remains the best constructor found so far.
+
 ## Reproduce
 
 ```bash

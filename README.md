@@ -53,7 +53,9 @@ campaign, not a single new heuristic — see `docs/competition_intelligence.md`.
 Local LNS worker status: harness built and verified; re-selection neighborhoods
 return 0 gains by construction. A genuine value-proposing constructor (NAF signed-digit
 chains) delivered −19.7%; see [`docs/lns_validation.md`](docs/lns_validation.md).
-Further gains require new constructors, not more re-selection.
+Further gains require new constructors, not more re-selection. Width-4 wNAF was
+tested and rejected (6.3% worse — its odd-digit bank shrinks the power ladder); see
+`docs/lns_validation.md`.
 
 ## Architecture (locked — do not add more)
 
