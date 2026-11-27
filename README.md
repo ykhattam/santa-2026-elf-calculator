@@ -49,6 +49,10 @@ Cheap levers (recombination, register relaxation, rescheduling) are already exha
 We will not use leaked frontier answer files. A full resolution requires a long compute
 campaign, not a single new heuristic — see `docs/competition_intelligence.md`.
 
+Local LNS worker status: harness built and verified; the implemented neighborhood
+returns 0 gains by construction (see [`docs/lns_validation.md`](docs/lns_validation.md)).
+A value-proposing constructor is required before a full campaign is worthwhile.
+
 ## Architecture (locked — do not add more)
 
 ```

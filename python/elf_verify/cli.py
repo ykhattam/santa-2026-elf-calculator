@@ -4,6 +4,7 @@ import argparse
 import csv
 import json
 import sqlite3
+import time
 from pathlib import Path
 
 from . import differential, fuzz, ledger
@@ -60,6 +61,20 @@ def build_parser() -> argparse.ArgumentParser:
     profiler.add_argument("--puzzles", default="data/puzzles.csv")
     profiler.add_argument("--db", default="solutions.db")
     profiler.add_argument("--out", default="outputs/regret_ranking.csv")
+
+    lns = subparsers.add_parser("lns", help="run local single-puzzle LNS validation")
+    lns.add_argument("--puzzles", default="data/puzzles.csv")
+    lns.add_argument("--db", default="solutions.db")
+    lns.add_argument("--limit", type=int, default=20)
+    lns.add_argument("--seeds", type=int, default=5)
+    lns.add_argument("--seconds", type=float, default=5.0)
+    lns.add_argument("--out", default="outputs/lns_validation_report.csv")
+    lns.add_argument("--submission-out", default="outputs/lns_candidates.csv")
+
+    lns_commit = subparsers.add_parser("lns-commit", help="commit only Rust-verified LNS candidates")
+    lns_commit.add_argument("--submission", default="outputs/lns_candidates.csv")
+    lns_commit.add_argument("--require-check", required=True)
+    lns_commit.add_argument("--db", default="solutions.db")
 
     export = subparsers.add_parser("export-submission", help="export the best verified solution per puzzle")
     export.add_argument("--db", default="solutions.db")
@@ -230,6 +245,96 @@ def main() -> int:
                 "GROUP BY pseudo_family ORDER BY SUM(regret) DESC"
             ):
                 print(f"  {family}: {count} puzzles, regret {regret}")
+
+    elif args.command == "lns":
+        from .lns import improve
+
+        with sqlite3.connect(args.db) as connection:
+            selected = [
+                row[0]
+                for row in connection.execute(
+                    "SELECT id FROM puzzles WHERE regret IS NOT NULL "
+                    "ORDER BY regret DESC LIMIT ?",
+                    (args.limit,),
+                )
+            ]
+            best_programs = dict(
+                connection.execute(
+                    "SELECT s.puzzle_id, s.program_json FROM solutions s "
+                    "JOIN (SELECT puzzle_id, MIN(steps) AS steps FROM solutions GROUP BY puzzle_id) b "
+                    "ON s.puzzle_id = b.puzzle_id AND s.steps = b.steps"
+                )
+            )
+        puzzles = {puzzle.id: puzzle for puzzle in load_puzzles(args.puzzles)}
+
+        report_rows = []
+        candidates = []
+        started = time.perf_counter()
+        for puzzle_id in selected:
+            puzzle = puzzles.get(puzzle_id)
+            if puzzle is None or puzzle_id not in best_programs:
+                continue
+            for seed in range(args.seeds):
+                result = improve(
+                    puzzle,
+                    seed=seed,
+                    budget_seconds=args.seconds,
+                    starting_program=best_programs[puzzle_id],
+                )
+                improvement = result["initial_steps"] - result["final_steps"]
+                report_rows.append(
+                    [
+                        puzzle_id,
+                        seed,
+                        result["initial_steps"],
+                        result["final_steps"],
+                        improvement,
+                        f"{args.seconds:.3f}",
+                    ]
+                )
+                if improvement > 0:
+                    candidates.append((puzzle_id, result["program"]))
+        elapsed = time.perf_counter() - started
+
+        for path, header, rows in (
+            (
+                args.out,
+                [
+                    "puzzle_id",
+                    "seed",
+                    "initial_steps",
+                    "final_steps",
+                    "improvement",
+                    "runtime_seconds",
+                ],
+                report_rows,
+            ),
+            (args.submission_out, ["id", "program"], candidates),
+        ):
+            destination = Path(path)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            with destination.open("w", newline="", encoding="utf-8") as handle:
+                writer = csv.writer(handle)
+                writer.writerow(header)
+                writer.writerows(rows)
+
+        improved_puzzles = len({row[0] for row in report_rows if row[4] > 0})
+        print(
+            f"LNS validation: {len(report_rows)} runs, {improved_puzzles} puzzles improved, "
+            f"wall {elapsed:.1f}s"
+        )
+        print(f"report: {args.out}")
+        print(f"Rust verification candidates: {args.submission_out}")
+
+    elif args.command == "lns-commit":
+        check = json.loads(Path(args.require_check).read_text(encoding="utf-8"))
+        if not check.get("ok"):
+            print("refusing to commit: Rust check did not pass", file=__import__("sys").stderr)
+            return 1
+        written = ledger.seed_solutions(
+            args.db, load_submission(args.submission), "lns_validation_v1"
+        )
+        print(f"committed {written} Rust-verified LNS improvements")
 
     elif args.command == "export-submission":
         with sqlite3.connect(args.db) as connection:

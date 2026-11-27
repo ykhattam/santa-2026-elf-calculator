@@ -94,9 +94,24 @@ class Builder:
                 best = (cost, exponent)
         return best
 
-    def build_target(self, target: int) -> None:
+    def build_target(self, target: int, strategy: str = "auto") -> None:
+        if strategy == "binary":
+            self.build_binary(target, self.acc)
+            return
+
         direct = self.binary_cost(target)
         alternative = self.subtractive_cost(target)
+        if strategy == "subtractive":
+            if alternative is not None:
+                exponent = alternative[1]
+                ceiling = 1 << exponent
+                self.emit("*", self.power_register(exponent), self.one, self.aux)
+                self.build_binary(ceiling - target, self.acc)
+                self.emit("-", self.aux, self.acc, self.acc)
+                return
+            self.build_binary(target, self.acc)
+            return
+
         if alternative is not None and alternative[0] < direct:
             exponent = alternative[1]
             ceiling = 1 << exponent
