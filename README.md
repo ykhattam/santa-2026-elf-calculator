@@ -17,7 +17,7 @@ facts and why the ceiling is not a quick fix.
 |-------|--------|--------|
 | Stage 0 — Lock & smoke test | Days 1–2 | **GATE PASSED** (2026-11-26) — dual verifiers, 0 divergences on 50,020 cases, Kaggle parity exact, classifier 92.5% |
 | Stage 1 — Full 1,000-puzzle profile | Days 3–4 | **GATE PASSED** — 100% baseline coverage, 591,002 steps, regret 551,843 |
-| Stage 2 — Bandit-routed heavy optimization | Days 5–40 | **IN PROGRESS** — two verified rounds, 591,002 → 551,171 steps; ceilings not met |
+| Stage 2 — Bandit-routed heavy optimization | Days 5–40 | **IN PROGRESS** — NAF chains: 551,171 → **442,326** steps (Kaggle confirmed); ceiling still missed |
 | Stage 3 — Global recipe-graph CP-SAT | Days 41–52 | Not started |
 | Stage 4 — Final polish & audit | Days 53–63 | Not started |
 
@@ -38,7 +38,8 @@ Stage 1 gate — **passed 2026-11-26**:
 Stage 2 progress (2026-11-26):
 - [x] Bandit allocator (85% regret exploit / 15% family exploration, stalled-family throttle)
 - [x] Subtractive-cone solver: `t = 2^k - d` chosen when cheaper than binary expansion
-- [x] Two verified rounds; 863 puzzles improved by the subtractive solver; best total **551,171** (Kaggle score confirmed)
+- [x] Two verified rounds; 863 puzzles improved by the subtractive solver (551,171 steps)
+- [x] NAF signed-digit constructor: 867 further improvements, best total **442,326** (Kaggle score `58991194`)
 - [x] Daily export `outputs/submission.csv`, full verifier check passes
 - [ ] Ceiling gates: **missed** — Day 15 target <128,000 vs current 551,171
 
@@ -49,9 +50,10 @@ Cheap levers (recombination, register relaxation, rescheduling) are already exha
 We will not use leaked frontier answer files. A full resolution requires a long compute
 campaign, not a single new heuristic — see `docs/competition_intelligence.md`.
 
-Local LNS worker status: harness built and verified; the implemented neighborhood
-returns 0 gains by construction (see [`docs/lns_validation.md`](docs/lns_validation.md)).
-A value-proposing constructor is required before a full campaign is worthwhile.
+Local LNS worker status: harness built and verified; re-selection neighborhoods
+return 0 gains by construction. A genuine value-proposing constructor (NAF signed-digit
+chains) delivered −19.7%; see [`docs/lns_validation.md`](docs/lns_validation.md).
+Further gains require new constructors, not more re-selection.
 
 ## Architecture (locked — do not add more)
 

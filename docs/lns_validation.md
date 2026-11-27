@@ -35,6 +35,21 @@ values* absent from the incumbent program. The next worker must implement a
 value-proposing neighborhood (bridge values, MITM reconstruction of long exclusive
 chains) before the full campaign is worth running.
 
+## Follow-up: value-proposing constructor (2026-11-27)
+
+A genuine new constructor was added: **NAF signed-digit chains**. Instead of
+re-selecting among existing options, it changes the value DAG by allowing negative
+powers of two (`t = Σ ±2^k`). Across all 26,902 targets this cuts nonzero digits by
+30.2% with zero invalid partial sums. A power above `value_limit` is rejected
+(NAF can carry one bit above the top), falling back to binary for that target.
+
+Result: **551,171 → 442,326 steps** (−19.7%), confirmed by Kaggle score `58991194`.
+
+The LNS re-selection harness was re-run with `naf` added to its neighborhood
+(20 puzzles × 3 seeds × 1 s): 60 runs, 0 improvements, as expected — `auto`
+already selects the cheapest constructor per target. The gain came from the new
+constructor applied globally, not from LNS search.
+
 ## Reproduce
 
 ```bash

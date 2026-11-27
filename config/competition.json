@@ -36,8 +36,8 @@
   "stage1_baseline_solver": "shared_powers_binary",
   "stage1_memory_high_water_kb": 25048,
   "stage1_subprocess_cap_mb": 2100,
-  "stage2_best_total_steps": 551171,
-  "stage2_kaggle_submission_ref": "58949399",
+  "stage2_best_total_steps": 442326,
+  "stage2_kaggle_submission_ref": "58991194",
   "stage2_ceiling_day15_status": "miss",
   "success_criteria": {
     "final_total_steps_target": 105000,

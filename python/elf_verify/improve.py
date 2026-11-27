@@ -14,6 +14,20 @@ import json
 from .model import Puzzle
 
 
+def naf_digits(value: int) -> list[int]:
+    """Non-adjacent form: digits in {-1, 0, +1}, least significant first."""
+    digits = []
+    while value:
+        if value & 1:
+            digit = 2 - (value & 3)
+            digits.append(digit)
+            value -= digit
+        else:
+            digits.append(0)
+        value >>= 1
+    return digits
+
+
 class Builder:
     def __init__(self, puzzle: Puzzle):
         self.puzzle = puzzle
@@ -71,6 +85,38 @@ class Builder:
         high = sum(1 for bit in bits if bit > self.ladder_size)
         return max(1, len(bits)) + high
 
+    def naf_positions(self, value: int) -> list[int]:
+        digits = naf_digits(value)
+        return [index for index, digit in enumerate(digits) if digit]
+
+    def naf_available(self, value: int) -> bool:
+        """NAF may carry one bit above the top; that power can exceed value_limit."""
+        positions = self.naf_positions(value)
+        return bool(positions) and (1 << positions[-1]) <= self.puzzle.value_limit
+
+    def naf_cost(self, value: int) -> int:
+        if not self.naf_available(value):
+            return 10**9
+        positions = self.naf_positions(value)
+        high = sum(1 for position in positions if position > self.ladder_size)
+        return max(1, len(positions)) + high
+
+    def build_naf(self, value: int) -> None:
+        digits = naf_digits(value)
+        positions = [index for index, digit in enumerate(digits) if digit]
+        if not positions:
+            return
+        highest = positions[-1]
+        source = self.power_register(highest)
+        self.emit("*", source, self.one, self.acc)
+        # NAF partial sums stay positive, so subtraction is always legal.
+        for position in positions[-2::-1]:
+            source = self.power_register(position)
+            if digits[position] == 1:
+                self.emit("+", self.acc, source, self.acc)
+            else:
+                self.emit("-", self.acc, source, self.acc)
+
     def subtractive_cost(self, target: int) -> tuple[int, int] | None:
         """Return (cost, exponent) for the best `2^k - d` construction."""
         best = None
@@ -94,35 +140,45 @@ class Builder:
                 best = (cost, exponent)
         return best
 
+    def _build_subtractive(self, target: int, exponent: int) -> None:
+        ceiling = 1 << exponent
+        source = self.power_register(exponent)
+        self.emit("*", source, self.one, self.aux)
+        self.build_binary(ceiling - target, self.acc)
+        # aux holds 2^k > d, so the subtraction is strictly positive.
+        self.emit("-", self.aux, self.acc, self.acc)
+
     def build_target(self, target: int, strategy: str = "auto") -> None:
         if strategy == "binary":
             self.build_binary(target, self.acc)
             return
+        if strategy == "naf":
+            if self.naf_available(target):
+                self.build_naf(target)
+            else:
+                self.build_binary(target, self.acc)
+            return
 
-        direct = self.binary_cost(target)
         alternative = self.subtractive_cost(target)
         if strategy == "subtractive":
             if alternative is not None:
-                exponent = alternative[1]
-                ceiling = 1 << exponent
-                self.emit("*", self.power_register(exponent), self.one, self.aux)
-                self.build_binary(ceiling - target, self.acc)
-                self.emit("-", self.aux, self.acc, self.acc)
-                return
-            self.build_binary(target, self.acc)
+                self._build_subtractive(target, alternative[1])
+            else:
+                self.build_binary(target, self.acc)
             return
 
-        if alternative is not None and alternative[0] < direct:
-            exponent = alternative[1]
-            ceiling = 1 << exponent
-            if exponent <= self.ladder_size:
-                self.emit("*", self.power_register(exponent), self.one, self.aux)
-            else:
-                source = self.power_register(exponent)
-                self.emit("*", source, self.one, self.aux)
-            self.build_binary(ceiling - target, self.acc)
-            # aux holds 2^k > d, so the subtraction is strictly positive.
-            self.emit("-", self.aux, self.acc, self.acc)
+        # auto: pick the cheapest available construction.
+        costs = [
+            (self.binary_cost(target), "binary"),
+            (self.naf_cost(target), "naf"),
+        ]
+        if alternative is not None:
+            costs.append((alternative[0], "subtractive"))
+        _, best = min(costs, key=lambda item: item[0])
+        if best == "naf":
+            self.build_naf(target)
+        elif best == "subtractive":
+            self._build_subtractive(target, alternative[1])
         else:
             self.build_binary(target, self.acc)
 

@@ -15,7 +15,7 @@ from .improve import Builder
 from .model import Puzzle, VerifyError
 from .verifier import verify_submission
 
-STRATEGIES = ("auto", "binary", "subtractive")
+STRATEGIES = ("auto", "binary", "subtractive", "naf")
 
 
 def targets_of(puzzle: Puzzle) -> list[int]:
