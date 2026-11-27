@@ -65,6 +65,20 @@ won on only 9/100 puzzles. Not adopted. Width-5 is worse still because it needs 
 Conclusion: under the 48-register constraint, higher radix does not pay. NAF
 remains the best constructor found so far.
 
+## Final test: subtractive ceiling + NAF remainder (2026-11-27)
+
+Combined the subtractive construction with NAF for the remainder. Result on 100
+puzzles: **44,834 steps — identical to NAF alone**, zero invalid programs. Full
+1,000-puzzle rollout produced 0 improvements. Not materially useful; kept because it
+is a strict generalization (never worse) of the subtractive path.
+
+## Consolidation
+
+Best verified submission remains **442,326 steps**, Kaggle score `58991194`,
+1,000/1,000 rows valid. No further constructor iterations are planned: NAF was the
+one measured win, higher-radix regressed, and all re-selection neighborhoods are
+locally optimal by construction.
+
 ## Reproduce
 
 ```bash

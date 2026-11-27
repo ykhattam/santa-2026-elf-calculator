@@ -133,7 +133,7 @@ class Builder:
                 continue
             if difference == target:
                 continue
-            cost = 2 + self.binary_cost(difference)
+            cost = 2 + min(self.binary_cost(difference), self.naf_cost(difference))
             if exponent > self.ladder_size:
                 cost += 1
             if best is None or cost < best[0]:
@@ -144,7 +144,11 @@ class Builder:
         ceiling = 1 << exponent
         source = self.power_register(exponent)
         self.emit("*", source, self.one, self.aux)
-        self.build_binary(ceiling - target, self.acc)
+        difference = ceiling - target
+        if self.naf_available(difference) and self.naf_cost(difference) < self.binary_cost(difference):
+            self.build_naf(difference)
+        else:
+            self.build_binary(difference, self.acc)
         # aux holds 2^k > d, so the subtraction is strictly positive.
         self.emit("-", self.aux, self.acc, self.acc)
 

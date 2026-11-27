@@ -17,7 +17,7 @@ facts and why the ceiling is not a quick fix.
 |-------|--------|--------|
 | Stage 0 — Lock & smoke test | Days 1–2 | **GATE PASSED** (2026-11-26) — dual verifiers, 0 divergences on 50,020 cases, Kaggle parity exact, classifier 92.5% |
 | Stage 1 — Full 1,000-puzzle profile | Days 3–4 | **GATE PASSED** — 100% baseline coverage, 591,002 steps, regret 551,843 |
-| Stage 2 — Bandit-routed heavy optimization | Days 5–40 | **IN PROGRESS** — NAF chains: 551,171 → **442,326** steps (Kaggle confirmed); ceiling still missed |
+| Stage 2 — Bandit-routed heavy optimization | Days 5–40 | **CONSOLIDATED** — NAF chains: 551,171 → **442,326** steps (Kaggle confirmed); ceiling still missed |
 | Stage 3 — Global recipe-graph CP-SAT | Days 41–52 | Not started |
 | Stage 4 — Final polish & audit | Days 53–63 | Not started |
 
@@ -54,8 +54,8 @@ Local LNS worker status: harness built and verified; re-selection neighborhoods
 return 0 gains by construction. A genuine value-proposing constructor (NAF signed-digit
 chains) delivered −19.7%; see [`docs/lns_validation.md`](docs/lns_validation.md).
 Further gains require new constructors, not more re-selection. Width-4 wNAF was
-tested and rejected (6.3% worse — its odd-digit bank shrinks the power ladder); see
-`docs/lns_validation.md`.
+tested and rejected (6.3% worse — its odd-digit bank shrinks the power ladder), and
+subtractive+NAF produced zero further gains. See `docs/lns_validation.md`.
 
 ## Architecture (locked — do not add more)
 
